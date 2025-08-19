@@ -1,5 +1,7 @@
 package com.tunaforce.company.controller;
 
+import com.tunaforce.company.dto.request.CompanySaveRequestDto;
+import com.tunaforce.company.dto.response.CompanyListResponseDto;
 import com.tunaforce.company.dto.response.CompanyResponseDto;
 import com.tunaforce.company.service.CompanyService;
 import feign.Response;
@@ -15,13 +17,11 @@ public class CompanyController {
 
     private final CompanyService companyService;
 
-    // TODO: 업체 프로필
     @GetMapping("/{companyId}")
     public ResponseEntity<CompanyResponseDto> getCompanyInfo(@PathVariable("companyId") String companyId) {
         return ResponseEntity.ok(companyService.getCompanyInfo(companyId));
     }
 
-    // TODO: 업체 검색
     @GetMapping
     public ResponseEntity<CompanyListResponseDto> searchCompany(
             @RequestParam(value = "name", required = false) String name,
@@ -29,7 +29,6 @@ public class CompanyController {
         return ResponseEntity.ok(companyService.searchCompany(name, hubId));
     }
 
-    // TODO: 업체 등록
     @PostMapping
     public ResponseEntity<Void> createCompany(@Valid @RequestBody CompanySaveRequestDto companySaveRequestDto) {
         companyService.createCompany(companySaveRequestDto);
