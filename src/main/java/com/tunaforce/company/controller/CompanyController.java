@@ -4,7 +4,6 @@ import com.tunaforce.company.dto.request.CompanySaveRequestDto;
 import com.tunaforce.company.dto.response.CompanyListResponseDto;
 import com.tunaforce.company.dto.response.CompanyResponseDto;
 import com.tunaforce.company.service.CompanyService;
-import feign.Response;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -35,17 +34,22 @@ public class CompanyController {
         return ResponseEntity.ok().build();
     }
 
-    //TODO: 업체 정보 수정
     @PatchMapping("/{companyId}")
-    public ResponseEntity<Void> editCompanyInfo(@PathVariable("companyId") String companyId,
-                                                @Valid @RequestBody CompanySaveRequestDto companySaveRequestDto) {
-        companyService.editCompanyInfo(companyId, companySaveRequestDto);
+    public ResponseEntity<Void> editCompanyInfo(
+            @PathVariable("companyId") String companyId,
+            @Valid @RequestBody CompanySaveRequestDto companySaveRequestDto,
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-User-Role", required = false) String userRole) {
+        companyService.editCompanyInfo(companyId, companySaveRequestDto, userId, userRole);
         return ResponseEntity.ok().build();
     }
-    // TODO: 업체 삭제
+
     @DeleteMapping("/{companyId}")
-    public ResponseEntity<Void> deleteCompany(@PathVariable("companyId") String companyId) {
-        companyService.deleteCompany(companyId);
+    public ResponseEntity<Void> deleteCompany(
+            @PathVariable("companyId") String companyId,
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-User-Role", required = false) String userRole) {
+        companyService.deleteCompany(companyId, userId, userRole);
         return ResponseEntity.ok().build();
     }
 }
