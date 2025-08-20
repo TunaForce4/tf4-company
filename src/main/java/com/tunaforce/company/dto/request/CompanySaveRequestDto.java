@@ -1,10 +1,12 @@
 package com.tunaforce.company.dto.request;
 
+import java.util.UUID;
+
 public record CompanySaveRequestDto(
         String companyName,
         String type,
         String address,
-        String hubId,
-        String userId
+        UUID hubId,
+        UUID userId
 ) {
 }

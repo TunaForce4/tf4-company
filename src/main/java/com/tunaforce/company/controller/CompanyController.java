@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/companies")
@@ -24,7 +26,7 @@ public class CompanyController {
     @GetMapping
     public ResponseEntity<CompanyListResponseDto> searchCompany(
             @RequestParam(value = "name", required = false) String name,
-            @RequestParam(value = "hubId", required = false) String hubId) {
+            @RequestParam(value = "hubId", required = false) UUID hubId) {
         return ResponseEntity.ok(companyService.searchCompany(name, hubId));
     }
 
@@ -38,7 +40,7 @@ public class CompanyController {
     public ResponseEntity<Void> editCompanyInfo(
             @PathVariable("companyId") String companyId,
             @Valid @RequestBody CompanySaveRequestDto companySaveRequestDto,
-            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
             @RequestHeader(value = "X-User-Role", required = false) String userRole) {
         companyService.editCompanyInfo(companyId, companySaveRequestDto, userId, userRole);
         return ResponseEntity.ok().build();
@@ -47,7 +49,7 @@ public class CompanyController {
     @DeleteMapping("/{companyId}")
     public ResponseEntity<Void> deleteCompany(
             @PathVariable("companyId") String companyId,
-            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
             @RequestHeader(value = "X-User-Role", required = false) String userRole) {
         companyService.deleteCompany(companyId, userId, userRole);
         return ResponseEntity.ok().build();
