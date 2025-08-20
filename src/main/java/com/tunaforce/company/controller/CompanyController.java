@@ -41,7 +41,7 @@ public class CompanyController {
             @PathVariable("companyId") String companyId,
             @Valid @RequestBody CompanySaveRequestDto companySaveRequestDto,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId,
-            @RequestHeader(value = "X-User-Role", required = false) String userRole) {
+            @RequestHeader(value = "X-Roles", required = false) String userRole) {
         companyService.editCompanyInfo(companyId, companySaveRequestDto, userId, userRole);
         return ResponseEntity.ok().build();
     }
@@ -50,7 +50,7 @@ public class CompanyController {
     public ResponseEntity<Void> deleteCompany(
             @PathVariable("companyId") String companyId,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId,
-            @RequestHeader(value = "X-User-Role", required = false) String userRole) {
+            @RequestHeader(value = "X-Roles", required = false) String userRole) {
         companyService.deleteCompany(companyId, userId, userRole);
         return ResponseEntity.ok().build();
     }
