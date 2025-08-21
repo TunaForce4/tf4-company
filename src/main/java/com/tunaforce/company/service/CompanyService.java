@@ -1,5 +1,6 @@
 package com.tunaforce.company.service;
 
+import com.tunaforce.company.dto.request.CompanyIdListRequestDto;
 import com.tunaforce.company.dto.request.CompanySaveRequestDto;
 import com.tunaforce.company.dto.response.CompanyListResponseDto;
 import com.tunaforce.company.dto.response.CompanyResponseDto;
@@ -128,5 +129,56 @@ public class CompanyService {
         }
 
         company.delete(headerUserId);
+    }
+
+    public CompanyListResponseDto searchCompanyByIdList(CompanyIdListRequestDto requestDto) {
+        List<UUID> ids = (requestDto == null) ? null : requestDto.companyIdList();
+        if (ids == null || ids.isEmpty()) {
+            return new CompanyListResponseDto(List.of());
+        }
+
+        List<Company> companies = companyRepository.findByCompanyIdInAndDeletedAtIsNull(ids);
+
+        Map<UUID, String> hubNameCache = new HashMap<>();
+        List<CompanyResponseDto> items = companies.stream().map(c -> {
+            String hubName = hubNameCache.computeIfAbsent(c.getHubId(), hid -> {
+                try {
+                    HubGetResponse hub = hubClient.getHub(hid);
+                    return hub != null ? hub.hubName() : null;
+                } catch (Exception ignored) {
+                    return null;
+                }
+            });
+            return new CompanyResponseDto(
+                    c.getCompanyId(),
+                    c.getCompanyName(),
+                    c.getCompanyType().name(),
+                    c.getAddress(),
+                    hubName
+            );
+        }).collect(Collectors.toList());
+
+        return new CompanyListResponseDto(items);
+    }
+
+    public CompanyResponseDto searchCompanyByUserId(UUID userId) {
+        Company company = companyRepository.findFirstByUserIdAndDeletedAtIsNull(userId)
+                .orElseThrow(CompanyNotFoundException::new);
+
+        String hubName = null;
+        try {
+            HubGetResponse hub = hubClient.getHub(company.getHubId());
+            hubName = hub != null ? hub.hubName() : null;
+        } catch (Exception ignored) {
+            // 허브 서비스 장애 시 hubName은 null 유지
+        }
+
+        return new CompanyResponseDto(
+                company.getCompanyId(),
+                company.getCompanyName(),
+                company.getCompanyType().name(),
+                company.getAddress(),
+                hubName
+        );
     }
 }

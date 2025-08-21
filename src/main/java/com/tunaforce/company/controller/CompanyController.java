@@ -1,5 +1,6 @@
 package com.tunaforce.company.controller;
 
+import com.tunaforce.company.dto.request.CompanyIdListRequestDto;
 import com.tunaforce.company.dto.request.CompanySaveRequestDto;
 import com.tunaforce.company.dto.response.CompanyListResponseDto;
 import com.tunaforce.company.dto.response.CompanyResponseDto;
@@ -28,6 +29,17 @@ public class CompanyController {
             @RequestParam(value = "name", required = false) String name,
             @RequestParam(value = "hubId", required = false) UUID hubId) {
         return ResponseEntity.ok(companyService.searchCompany(name, hubId));
+    }
+
+    // user id로 업체 단건 조회
+    @GetMapping("/users/{userId}")
+    public ResponseEntity<CompanyResponseDto> getCompanyByUserId(@PathVariable("userId") UUID userId){
+        return ResponseEntity.ok(companyService.searchCompanyByUserId(userId));
+    }
+
+    @PostMapping("/list")
+    public ResponseEntity<CompanyListResponseDto> searchCompanyByList(@RequestBody CompanyIdListRequestDto requestDto) {
+        return ResponseEntity.ok(companyService.searchCompanyByIdList(requestDto));
     }
 
     @PostMapping
