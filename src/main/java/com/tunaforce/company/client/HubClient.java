@@ -13,4 +13,8 @@ public interface HubClient {
 
     @GetMapping("/hubs/{hubId}")
     HubGetResponse getHub(@PathVariable("hubId") UUID hubId);
+
+    // 허브 관리자 → 허브 조회 API 연동
+    @GetMapping("/hubs/admins/{hubAdminId}")
+    com.tunaforce.company.client.dto.HubByAdminResponse getHubByAdmin(@PathVariable("hubAdminId") UUID hubAdminId);
 }

@@ -27,8 +27,11 @@ public class CompanyController {
     @GetMapping
     public ResponseEntity<CompanyListResponseDto> searchCompany(
             @RequestParam(value = "name", required = false) String name,
-            @RequestParam(value = "hubId", required = false) UUID hubId) {
-        return ResponseEntity.ok(companyService.searchCompany(name, hubId));
+            @RequestParam(value = "hubId", required = false) UUID hubId,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
+            @RequestHeader(value = "X-Roles", required = false) String role) {
+        // HUB 역할은 자신의 허브 내에서만 검색 가능: Service에서 강제
+        return ResponseEntity.ok(companyService.searchCompanyWithScope(name, hubId, userId, role));
     }
 
     // user id로 업체 단건 조회
@@ -43,8 +46,11 @@ public class CompanyController {
     }
 
     @PostMapping
-    public ResponseEntity<Void> createCompany(@Valid @RequestBody CompanySaveRequestDto companySaveRequestDto) {
-        companyService.createCompany(companySaveRequestDto);
+    public ResponseEntity<Void> createCompany(
+            @Valid @RequestBody CompanySaveRequestDto companySaveRequestDto,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
+            @RequestHeader(value = "X-Roles", required = false) String role) {
+        companyService.createCompanyWithAuth(companySaveRequestDto, userId, role);
         return ResponseEntity.ok().build();
     }
 

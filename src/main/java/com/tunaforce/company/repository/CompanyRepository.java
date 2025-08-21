@@ -9,8 +9,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface CompanyRepository extends JpaRepository<Company, UUID> {
-    @Query("SELECT c FROM Company c WHERE (:name IS NULL OR LOWER(c.companyName) LIKE LOWER(CONCAT('%', :name, '%'))) " +
-	    "AND (:hubId IS NULL OR c.hubId = :hubId)")
+    @Query(value = "SELECT * FROM p_company c WHERE " +
+            "(:name IS NULL OR LOWER(c.company_name) LIKE LOWER('%' || :name || '%')) " +
+            "AND (:hubId IS NULL OR c.hub_id = CAST(:hubId AS UUID)) " +
+            "AND c.deleted_at IS NULL",
+            nativeQuery = true)
     List<Company> search(String name, UUID hubId);
 
     // Soft-delete 고려: deletedAt IS NULL

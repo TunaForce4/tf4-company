@@ -9,6 +9,7 @@ import com.tunaforce.company.entity.CompanyType;
 import com.tunaforce.company.exception.CompanyNotFoundException;
 import com.tunaforce.company.repository.CompanyRepository;
 import com.tunaforce.company.client.HubClient;
+import com.tunaforce.company.client.dto.HubByAdminResponse;
 import com.tunaforce.company.client.dto.HubGetResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -46,17 +47,65 @@ public class CompanyService {
 
         List<Company> companies = companyRepository.search(normalizedName, hubId);
 
-    return toCompanyListResponse(companies);
+        return toCompanyListResponse(companies);
+    }
+
+    // 역할 기반 조회 범위 강제 버전 (Controller에서 호출)
+    public CompanyListResponseDto searchCompanyWithScope(String name, UUID hubId,
+                                                         UUID headerUserId, String headerUserRole) {
+        String role = headerUserRole == null ? "" : headerUserRole.toUpperCase();
+
+        UUID effectiveHubId = hubId;
+        if ("HUB".equals(role)) {
+            // 허브 관리자는 자신의 허브로만 제한
+            try {
+                HubByAdminResponse hubInfo = hubClient.getHubByAdmin(headerUserId);
+                if (hubInfo == null || hubInfo.hubId() == null) {
+                    // 허브 정보를 확인할 수 없으면 검색 허용하지 않음
+                    return new CompanyListResponseDto(List.of());
+                }
+                effectiveHubId = hubInfo.hubId();
+            } catch (Exception ignore) {
+            }
+        }
+        // MASTER, COMPANY, DELIVERY: 읽기 권한은 허용 (필요 시 세분화 가능)
+        return searchCompany(name, effectiveHubId);
     }
 
     @Transactional
-    public void createCompany(@Valid CompanySaveRequestDto companySaveRequestDto) {
+    public void createCompanyWithAuth(@Valid CompanySaveRequestDto dto,
+                                      UUID headerUserId, String headerUserRole) {
+        String role = headerUserRole == null ? "" : headerUserRole.toUpperCase();
+
+        if ("MASTER".equals(role)) {
+            // 모두 허용
+        } else if ("HUB".equals(role)) {
+            // 허브 관리자는 자신의 허브에 소속된 업체만 생성 가능
+            UUID adminHubId = null;
+            try {
+                HubByAdminResponse hubInfo = hubClient.getHubByAdmin(headerUserId);
+                if (hubInfo != null) adminHubId = hubInfo.hubId();
+            } catch (Exception ignore) {
+            }
+            if (adminHubId == null || dto.hubId() == null || !adminHubId.equals(dto.hubId())) {
+                throw new com.tunaforce.company.exception.ForbiddenException("허브 관리자는 소속 허브의 업체만 생성할 수 있습니다.");
+            }
+        } else if ("COMPANY".equals(role)) {
+            // 업체 담당자는 자신의 업체만 생성 가능(본인 userId로 생성)
+            if (dto.userId() == null || !dto.userId().equals(headerUserId)) {
+                throw new com.tunaforce.company.exception.ForbiddenException("업체 담당자는 자신의 userId로만 업체를 생성할 수 있습니다.");
+            }
+            // 허브 소속 제한은 정책에 따라 필요 시 추가 가능
+        } else {
+            throw new com.tunaforce.company.exception.ForbiddenException("생성 권한이 없습니다.");
+        }
+
         companyRepository.save(Company.builder()
-                .companyName(companySaveRequestDto.companyName())
-                .address(companySaveRequestDto.address())
-                .companyType(CompanyType.fromString(companySaveRequestDto.type()))
-                .hubId(companySaveRequestDto.hubId())
-                .userId(companySaveRequestDto.userId())
+                .companyName(dto.companyName())
+                .address(dto.address())
+                .companyType(CompanyType.fromString(dto.type()))
+                .hubId(dto.hubId())
+                .userId(dto.userId())
                 .build());
     }
 
@@ -65,13 +114,38 @@ public class CompanyService {
                                 UUID headerUserId, String headerUserRole) {
         Company company = companyRepository.findById(companyId).orElseThrow(CompanyNotFoundException::new);
 
-        // 권한: MASTER/HUB 이거나 소유자(userId 일치)
-        boolean isPrivileged = headerUserRole != null && (
-                headerUserRole.equalsIgnoreCase("MASTER") || headerUserRole.equalsIgnoreCase("HUB")
-        );
-        boolean isOwner = company.getUserId() != null && company.getUserId().equals(headerUserId);
-        if (!(isPrivileged || isOwner)) {
-            throw new com.tunaforce.company.exception.ForbiddenException("수정 권한이 없습니다.");
+        // 권한 정책
+        // - MASTER: 모두 허용
+        // - HUB: 자신의 허브 소속 업체만 수정 가능
+        // - COMPANY(업체 담당자): 자신의 업체만 수정 가능
+        String role = headerUserRole == null ? "" : headerUserRole.toUpperCase();
+        boolean isMaster = role.equals("MASTER");
+        boolean isHub = role.equals("HUB");
+        boolean isCompany = role.equals("COMPANY");
+
+        if (!isMaster) {
+            if (isHub) {
+                // 허브 관리자의 소속 허브를 허브 서비스에서 조회
+                // 토큰 subject=사용자 ID
+                UUID adminHubId = null;
+                try {
+                    HubByAdminResponse hubInfo = hubClient.getHubByAdmin(headerUserId);
+                    if (hubInfo != null) adminHubId = hubInfo.hubId();
+                } catch (Exception ignore) {
+                }
+
+                if (adminHubId == null || !adminHubId.equals(company.getHubId())) {
+                    throw new com.tunaforce.company.exception.ForbiddenException("허브 관리자 권한으로는 소속 허브 내 업체만 수정 가능합니다.");
+                }
+            } else if (isCompany) {
+                // 업체 담당자는 본인 업체만
+                if (company.getUserId() == null || !company.getUserId().equals(headerUserId)) {
+                    throw new com.tunaforce.company.exception.ForbiddenException("업체 담당자는 자신의 업체만 수정할 수 있습니다.");
+                }
+            } else {
+                // 그 외 권한 없음
+                throw new com.tunaforce.company.exception.ForbiddenException("수정 권한이 없습니다.");
+            }
         }
         // hubId/userId는 DTO에서 바로 UUID로 전달됨
 
@@ -90,13 +164,25 @@ public class CompanyService {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(CompanyNotFoundException::new);
 
-        // 간단한 권한 체크: ADMIN/HUB는 모두 허용, 아니면 company.userId와 일치해야 함
-        boolean isPrivileged = headerUserRole != null && (
-                headerUserRole.equalsIgnoreCase("ADMIN") || headerUserRole.equalsIgnoreCase("HUB")
-        );
-        boolean isOwner = company.getUserId() != null && company.getUserId().equals(headerUserId);
+        // 삭제 권한 정책
+        // - MASTER: 모두 허용
+        // - HUB: 자신의 허브 소속 업체만 삭제 가능
+        // - COMPANY: 삭제 불가
+        String role = headerUserRole == null ? "" : headerUserRole.toUpperCase();
+        if ("MASTER".equals(role)) {
+            // ok
+        } else if ("HUB".equals(role)) {
+            UUID adminHubId = null;
+            try {
+                HubByAdminResponse hubInfo = hubClient.getHubByAdmin(headerUserId);
+                if (hubInfo != null) adminHubId = hubInfo.hubId();
+            } catch (Exception ignore) {
+            }
 
-        if (!(isPrivileged || isOwner)) {
+            if (adminHubId == null || !adminHubId.equals(company.getHubId())) {
+                throw new com.tunaforce.company.exception.ForbiddenException("허브 관리자는 소속 허브 내 업체만 삭제할 수 있습니다.");
+            }
+        } else {
             throw new com.tunaforce.company.exception.ForbiddenException("삭제 권한이 없습니다.");
         }
 
@@ -110,7 +196,7 @@ public class CompanyService {
         }
 
         List<Company> companies = companyRepository.findByCompanyIdInAndDeletedAtIsNull(ids);
-    return toCompanyListResponse(companies);
+        return toCompanyListResponse(companies);
     }
 
     public CompanyResponseDto searchCompanyByUserId(UUID userId) {
