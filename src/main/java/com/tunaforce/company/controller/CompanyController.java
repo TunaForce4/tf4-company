@@ -20,7 +20,7 @@ public class CompanyController {
     private final CompanyService companyService;
 
     @GetMapping("/{companyId}")
-    public ResponseEntity<CompanyResponseDto> getCompanyInfo(@PathVariable("companyId") String companyId) {
+    public ResponseEntity<CompanyResponseDto> getCompanyInfo(@PathVariable("companyId") UUID companyId) {
         return ResponseEntity.ok(companyService.getCompanyInfo(companyId));
     }
 
@@ -50,7 +50,7 @@ public class CompanyController {
 
     @PatchMapping("/{companyId}")
     public ResponseEntity<Void> editCompanyInfo(
-            @PathVariable("companyId") String companyId,
+            @PathVariable("companyId") UUID companyId,
             @Valid @RequestBody CompanySaveRequestDto companySaveRequestDto,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId,
             @RequestHeader(value = "X-Roles", required = false) String userRole) {
@@ -60,7 +60,7 @@ public class CompanyController {
 
     @DeleteMapping("/{companyId}")
     public ResponseEntity<Void> deleteCompany(
-            @PathVariable("companyId") String companyId,
+            @PathVariable("companyId") UUID companyId,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId,
             @RequestHeader(value = "X-Roles", required = false) String userRole) {
         companyService.deleteCompany(companyId, userId, userRole);

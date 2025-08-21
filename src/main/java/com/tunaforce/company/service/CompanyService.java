@@ -27,17 +27,10 @@ public class CompanyService {
     private final CompanyRepository companyRepository;
     private final HubClient hubClient;
 
-    public CompanyResponseDto getCompanyInfo(String companyId) {
-        Company company = companyRepository.findById(UUID.fromString(companyId))
+    public CompanyResponseDto getCompanyInfo(UUID companyId) {
+        Company company = companyRepository.findById(companyId)
                 .orElseThrow(CompanyNotFoundException::new);
-
-        String hubName = null;
-        try {
-            HubGetResponse hub = hubClient.getHub(company.getHubId());
-            hubName = hub != null ? hub.hubName() : null;
-        } catch (Exception ignored) {
-            // 허브 서비스 장애 시 hubName은 null 유지
-        }
+        String hubName = resolveHubName(company.getHubId());
         return new CompanyResponseDto(
                 company.getCompanyId(),
                 company.getCompanyName(),
@@ -53,28 +46,7 @@ public class CompanyService {
 
         List<Company> companies = companyRepository.search(normalizedName, hubId);
 
-        // 요청 단위 로컬 캐시로 동일 hubId 중복 호출 방지
-        Map<UUID, String> hubNameCache = new HashMap<>();
-
-        List<CompanyResponseDto> items = companies.stream().map(c -> {
-            String hubName = hubNameCache.computeIfAbsent(c.getHubId(), hid -> {
-                try {
-                    HubGetResponse hub = hubClient.getHub(hid);
-                    return hub != null ? hub.hubName() : null;
-                } catch (Exception ignored) {
-                    return null;
-                }
-            });
-            return new CompanyResponseDto(
-                    c.getCompanyId(),
-                    c.getCompanyName(),
-                    c.getCompanyType().name(),
-                    c.getAddress(),
-                    hubName
-            );
-        }).collect(Collectors.toList());
-
-        return new CompanyListResponseDto(items);
+    return toCompanyListResponse(companies);
     }
 
     @Transactional
@@ -89,9 +61,9 @@ public class CompanyService {
     }
 
     @Transactional
-    public void editCompanyInfo(String companyId, @Valid CompanySaveRequestDto companySaveRequestDto,
+    public void editCompanyInfo(UUID companyId, @Valid CompanySaveRequestDto companySaveRequestDto,
                                 UUID headerUserId, String headerUserRole) {
-        Company company = companyRepository.findById(UUID.fromString(companyId)).orElseThrow(CompanyNotFoundException::new);
+        Company company = companyRepository.findById(companyId).orElseThrow(CompanyNotFoundException::new);
 
         // 권한: MASTER/HUB 이거나 소유자(userId 일치)
         boolean isPrivileged = headerUserRole != null && (
@@ -114,8 +86,8 @@ public class CompanyService {
     }
 
     @Transactional
-    public void deleteCompany(String companyId, UUID headerUserId, String headerUserRole) {
-        Company company = companyRepository.findById(UUID.fromString(companyId))
+    public void deleteCompany(UUID companyId, UUID headerUserId, String headerUserRole) {
+        Company company = companyRepository.findById(companyId)
                 .orElseThrow(CompanyNotFoundException::new);
 
         // 간단한 권한 체크: ADMIN/HUB는 모두 허용, 아니면 company.userId와 일치해야 함
@@ -138,40 +110,14 @@ public class CompanyService {
         }
 
         List<Company> companies = companyRepository.findByCompanyIdInAndDeletedAtIsNull(ids);
-
-        Map<UUID, String> hubNameCache = new HashMap<>();
-        List<CompanyResponseDto> items = companies.stream().map(c -> {
-            String hubName = hubNameCache.computeIfAbsent(c.getHubId(), hid -> {
-                try {
-                    HubGetResponse hub = hubClient.getHub(hid);
-                    return hub != null ? hub.hubName() : null;
-                } catch (Exception ignored) {
-                    return null;
-                }
-            });
-            return new CompanyResponseDto(
-                    c.getCompanyId(),
-                    c.getCompanyName(),
-                    c.getCompanyType().name(),
-                    c.getAddress(),
-                    hubName
-            );
-        }).collect(Collectors.toList());
-
-        return new CompanyListResponseDto(items);
+    return toCompanyListResponse(companies);
     }
 
     public CompanyResponseDto searchCompanyByUserId(UUID userId) {
         Company company = companyRepository.findFirstByUserIdAndDeletedAtIsNull(userId)
                 .orElseThrow(CompanyNotFoundException::new);
 
-        String hubName = null;
-        try {
-            HubGetResponse hub = hubClient.getHub(company.getHubId());
-            hubName = hub != null ? hub.hubName() : null;
-        } catch (Exception ignored) {
-            // 허브 서비스 장애 시 hubName은 null 유지
-        }
+        String hubName = resolveHubName(company.getHubId());
 
         return new CompanyResponseDto(
                 company.getCompanyId(),
@@ -180,5 +126,39 @@ public class CompanyService {
                 company.getAddress(),
                 hubName
         );
+    }
+
+    // hubName 조회 중복 로직 추출: per-request 캐시를 사용해 허브 서비스 중복 호출 방지
+    private String resolveHubName(UUID hubId, Map<UUID, String> cache) {
+        if (hubId == null) return null;
+        return cache.computeIfAbsent(hubId, hid -> {
+            try {
+                HubGetResponse hub = hubClient.getHub(hid);
+                return hub != null ? hub.hubName() : null;
+            } catch (Exception ignored) {
+                return null;
+            }
+        });
+    }
+
+    // 단건 조회용 편의 메서드
+    private String resolveHubName(UUID hubId) {
+        return resolveHubName(hubId, new HashMap<>());
+    }
+
+    // 공통: Company 리스트를 DTO 리스트로 변환하며 hubName 조회에 요청 단위 캐시 적용
+    private CompanyListResponseDto toCompanyListResponse(List<Company> companies) {
+        Map<UUID, String> hubNameCache = new HashMap<>();
+        List<CompanyResponseDto> items = companies.stream().map(c -> {
+            String hubName = resolveHubName(c.getHubId(), hubNameCache);
+            return new CompanyResponseDto(
+                    c.getCompanyId(),
+                    c.getCompanyName(),
+                    c.getCompanyType().name(),
+                    c.getAddress(),
+                    hubName
+            );
+        }).collect(Collectors.toList());
+        return new CompanyListResponseDto(items);
     }
 }
