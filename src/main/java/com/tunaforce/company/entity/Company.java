@@ -2,6 +2,7 @@ package com.tunaforce.company.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -22,7 +23,7 @@ public class Company extends Timestamped{
     @Column(name = "company_name", unique = true, nullable = false)
     private String companyName;
 
-    @NotBlank
+    @NotNull
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private CompanyType companyType;
@@ -31,7 +32,7 @@ public class Company extends Timestamped{
     @Column(nullable = false)
     private String address;
 
-    @NotBlank
+    @NotNull
     @Column(nullable = false)
     private UUID hubId;
 
