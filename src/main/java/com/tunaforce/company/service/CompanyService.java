@@ -90,13 +90,8 @@ public class CompanyService {
             if (adminHubId == null || dto.hubId() == null || !adminHubId.equals(dto.hubId())) {
                 throw new com.tunaforce.company.exception.ForbiddenException("허브 관리자는 소속 허브의 업체만 생성할 수 있습니다.");
             }
-        } else if ("COMPANY".equals(role)) {
-            // 업체 담당자는 자신의 업체만 생성 가능(본인 userId로 생성)
-            if (dto.userId() == null || !dto.userId().equals(headerUserId)) {
-                throw new com.tunaforce.company.exception.ForbiddenException("업체 담당자는 자신의 userId로만 업체를 생성할 수 있습니다.");
-            }
-            // 허브 소속 제한은 정책에 따라 필요 시 추가 가능
         } else {
+            // 업체 담당자, delivery는 생성 불가능
             throw new com.tunaforce.company.exception.ForbiddenException("생성 권한이 없습니다.");
         }
 
