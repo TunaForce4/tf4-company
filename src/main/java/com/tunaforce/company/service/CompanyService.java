@@ -37,6 +37,7 @@ public class CompanyService {
                 company.getCompanyName(),
                 company.getCompanyType().name(),
                 company.getAddress(),
+                company.getHubId(),
                 hubName
         );
     }
@@ -205,6 +206,7 @@ public class CompanyService {
                 company.getCompanyName(),
                 company.getCompanyType().name(),
                 company.getAddress(),
+                company.getHubId(),
                 hubName
         );
     }
@@ -237,6 +239,7 @@ public class CompanyService {
                     c.getCompanyName(),
                     c.getCompanyType().name(),
                     c.getAddress(),
+                    c.getHubId(),
                     hubName
             );
         }).collect(Collectors.toList());
