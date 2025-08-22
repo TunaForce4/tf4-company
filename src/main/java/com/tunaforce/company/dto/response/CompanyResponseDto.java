@@ -8,6 +8,7 @@ public record CompanyResponseDto(
         String companyType,
         String address,
         UUID hubId,
-        String hubName
+        String hubName,
+        UUID userId
 ) {
 }

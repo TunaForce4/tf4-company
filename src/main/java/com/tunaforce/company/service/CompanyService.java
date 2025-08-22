@@ -38,7 +38,8 @@ public class CompanyService {
                 company.getCompanyType().name(),
                 company.getAddress(),
                 company.getHubId(),
-                hubName
+                hubName,
+                company.getUserId()
         );
     }
 
@@ -207,7 +208,8 @@ public class CompanyService {
                 company.getCompanyType().name(),
                 company.getAddress(),
                 company.getHubId(),
-                hubName
+                hubName,
+                company.getUserId()
         );
     }
 
@@ -240,7 +242,8 @@ public class CompanyService {
                     c.getCompanyType().name(),
                     c.getAddress(),
                     c.getHubId(),
-                    hubName
+                    hubName,
+                    c.getUserId()
             );
         }).collect(Collectors.toList());
         return new CompanyListResponseDto(items);
