@@ -1,0 +1,75 @@
+package com.tunaforce.company.controller;
+
+import com.tunaforce.company.dto.request.CompanyIdListRequestDto;
+import com.tunaforce.company.dto.request.CompanySaveRequestDto;
+import com.tunaforce.company.dto.response.CompanyListResponseDto;
+import com.tunaforce.company.dto.response.CompanyResponseDto;
+import com.tunaforce.company.service.CompanyService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
+
+@RestController
+@RequiredArgsConstructor
+@RequestMapping("/companies")
+public class CompanyController {
+
+    private final CompanyService companyService;
+
+    @GetMapping("/{companyId}")
+    public ResponseEntity<CompanyResponseDto> getCompanyInfo(@PathVariable("companyId") UUID companyId) {
+        return ResponseEntity.ok(companyService.getCompanyInfo(companyId));
+    }
+
+    @GetMapping
+    public ResponseEntity<CompanyListResponseDto> searchCompany(
+            @RequestParam(value = "name", required = false) String name,
+            @RequestParam(value = "hubId", required = false) UUID hubId,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
+            @RequestHeader(value = "X-Roles", required = false) String role) {
+        // HUB 역할은 자신의 허브 내에서만 검색 가능: Service에서 강제
+        return ResponseEntity.ok(companyService.searchCompanyWithScope(name, hubId, userId, role));
+    }
+
+    // user id로 업체 단건 조회
+    @GetMapping("/users/{userId}")
+    public ResponseEntity<CompanyResponseDto> getCompanyByUserId(@PathVariable("userId") UUID userId){
+        return ResponseEntity.ok(companyService.searchCompanyByUserId(userId));
+    }
+
+    @PostMapping("/list")
+    public ResponseEntity<CompanyListResponseDto> searchCompanyByList(@RequestBody CompanyIdListRequestDto requestDto) {
+        return ResponseEntity.ok(companyService.searchCompanyByIdList(requestDto));
+    }
+
+    @PostMapping
+    public ResponseEntity<Void> createCompany(
+            @Valid @RequestBody CompanySaveRequestDto companySaveRequestDto,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
+            @RequestHeader(value = "X-Roles", required = false) String role) {
+        companyService.createCompanyWithAuth(companySaveRequestDto, userId, role);
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/{companyId}")
+    public ResponseEntity<Void> editCompanyInfo(
+            @PathVariable("companyId") UUID companyId,
+            @Valid @RequestBody CompanySaveRequestDto companySaveRequestDto,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
+            @RequestHeader(value = "X-Roles", required = false) String userRole) {
+        companyService.editCompanyInfo(companyId, companySaveRequestDto, userId, userRole);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{companyId}")
+    public ResponseEntity<Void> deleteCompany(
+            @PathVariable("companyId") UUID companyId,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
+            @RequestHeader(value = "X-Roles", required = false) String userRole) {
+        companyService.deleteCompany(companyId, userId, userRole);
+        return ResponseEntity.ok().build();
+    }
+}

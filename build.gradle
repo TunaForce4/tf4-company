@@ -29,16 +29,28 @@ ext {
 }
 
 dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-	implementation 'org.springframework.boot:spring-boot-starter-validation'
-	implementation 'org.springframework.boot:spring-boot-starter-web'
-	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
-	implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
-	compileOnly 'org.projectlombok:lombok'
-	runtimeOnly 'org.postgresql:postgresql'
+	// ===== Core: Spring Boot Starters =====
+	implementation 'org.springframework.boot:spring-boot-starter-web'          // 웹 MVC, JSON, 내장 톰캣
+	// implementation 'org.springframework.boot:spring-boot-starter-actuator'   // 헬스체크/메트릭 (필요 시 주석 해제)
+
+	// ===== Persistence / Data Access =====
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'     // JPA/Hibernate
+	runtimeOnly   'org.postgresql:postgresql'                                   // PostgreSQL JDBC 드라이버
+
+	// ===== Validation =====
+	implementation 'org.springframework.boot:spring-boot-starter-validation'    // Bean Validation
+
+	// ===== Cloud / Service Discovery / HTTP Clients =====
+	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client' // 유레카 클라이언트
+	implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'              // OpenFeign HTTP 클라이언트
+
+	// ===== Build-time Tools =====
+	compileOnly         'org.projectlombok:lombok'                              // Lombok(컴파일 시)
 	annotationProcessor 'org.projectlombok:lombok'
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+	// ===== Test =====
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'      // JUnit/AssertJ/Mockito 등
+	testRuntimeOnly   'org.junit.platform:junit-platform-launcher'              // 테스트 런처(런타임)
 }
 
 dependencyManagement {
@@ -49,4 +61,8 @@ dependencyManagement {
 
 tasks.named('test') {
 	useJUnitPlatform()
+}
+
+springBoot {
+    mainClass = 'com.tunaforce.company.CompanyApplication'
 }
